@@ -98,8 +98,23 @@ def read_cifar10(filename_queue):
   return result
 
 
+def _apply_dct(image):
+  """Applies DCT to each channel in image.
+
+  Args:
+    image: 3-D Tensor of [height, width, 3] of type.float32.
+
+  Returns:
+    image: 3-D Tensor of [height, width, 3] of type.float32.
+  """
+  channels = tf.unstack(image, axis=2)
+  for channel in channels:
+    arr = channel.eval(session=tf.Session())
+    cv2.dct(arr, numpy.empty(arr.shape))
+  tf.stack(channels, axis=2)
+
 def _generate_image_and_label_batch(image, label, min_queue_examples,
-                                    batch_size, shuffle):
+                                    batch_size, shuffle, transformed=False):
   """Construct a queued batch of images and labels.
 
   Args:
@@ -131,13 +146,19 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
         num_threads=num_preprocess_threads,
         capacity=min_queue_examples + 3 * batch_size)
 
+  if transformed:
+    imageList = tf.unstack(images, axis=0)
+    for image in imageList:
+      _apply_dct(image)
+    tf.stack(imageList, axis=0)
+
   # Display the training images in the visualizer.
   tf.summary.image('images', images)
 
   return images, tf.reshape(label_batch, [batch_size])
 
 
-def distorted_inputs(data_dir, batch_size):
+def distorted_inputs(data_dir, batch_size, transformed=False):
   """Construct distorted input for CIFAR training using the Reader ops.
 
   Args:
@@ -199,7 +220,7 @@ def distorted_inputs(data_dir, batch_size):
   # Generate a batch of images and labels by building up a queue of examples.
   return _generate_image_and_label_batch(float_image, read_input.label,
                                          min_queue_examples, batch_size,
-                                         shuffle=True)
+                                         shuffle=True, transformed=transformed)
 
 
 def inputs(eval_data, data_dir, batch_size):

@@ -39,6 +39,8 @@ from __future__ import print_function
 from datetime import datetime
 import time
 
+import numpy as np
+import cv2
 import tensorflow as tf
 
 import cifar10
@@ -65,7 +67,7 @@ def train():
     # Force input pipeline to CPU:0 to avoid operations sometimes ending up on
     # GPU and resulting in a slow down.
     with tf.device('/cpu:0'):
-      images, labels = cifar10.distorted_inputs()
+      images, labels = cifar10.distorted_inputs(transformed=True)
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
