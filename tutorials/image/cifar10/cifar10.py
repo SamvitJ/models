@@ -187,6 +187,63 @@ def inputs(eval_data, transformed=False):
   return images, labels
 
 
+def _conv2d_fft(images, kernel, strides, padding):
+  """Computes the convolution as a Hadamard (pointwise) product in the frequency domain
+
+  Args:
+
+  Returns:
+
+  """
+
+  # extract parameters
+  input_shape = tf.unstack(tf.shape(images), axis=0)
+  # assumes data format = "NHWC"
+  batch_size = input_shape[0]
+  inp_h = input_shape[1]
+  inp_w = input_shape[2]
+  inp_chan = input_shape[3]
+
+  kernel_shape = tf.unstack(tf.shape(kernel), axis=0)
+  ker_h = kernel_shape[0]
+  ker_w = kernel_shape[1]
+  out_chan = kernel_shape[3]
+
+  # pad filters to input shape
+  # kernel_padded = tf.zeros([inp_h, inp_w, inp_chan, out_chan], dtype=tf.float32)
+  tf.pad(kernel, [[0, inp_h - ker_h], [0, inp_w - ker_w], [0, 0], [0, 0]], "CONSTANT")
+
+  # reshape for FFT
+  inp_flat = tf.reshape(images, [inp_h, inp_w, inp_chan * batch_size])
+  ker_flat = tf.reshape(kernel, [inp_h, inp_w, inp_chan * out_chan])
+
+  # perform FFT
+  frames = tf.unstack(inp_flat, axis=2)
+  framesFFTList = []
+  for frame in frames:
+    frame = tf.spectral.fft2d(frame, name=None)
+    framesFFTList.append(frame)
+  framesFFT = tf.stack(framesFFTList, axis=2)
+
+  kernels = tf.unstack(ker_flat, axis=2)
+  kernelsFFTList = []
+  for kern in kernels:
+    kern = tf.spectral.fft2d(kern, name=None)
+    kernelsFFTList.append(kern)
+  kernelsFFT = tf.stack(kernelsFFTList, axis=2)
+
+  # perform Hadamard (pointwise) product
+  for frameFFT in framesFFT:
+    for kernelFFT in kernelsFFT:
+      # build tensor
+
+  # compute sums (reduce)
+
+  # reshape for IFFT
+
+  # perform IFFT
+
+
 def inference(images):
   """Build the CIFAR-10 model.
 
@@ -207,7 +264,8 @@ def inference(images):
                                          shape=[5, 5, 3, 64],
                                          stddev=5e-2,
                                          wd=0.0)
-    conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
+    # conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
+    conv = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     pre_activation = tf.nn.bias_add(conv, biases)
     conv1 = tf.nn.relu(pre_activation, name=scope.name)
