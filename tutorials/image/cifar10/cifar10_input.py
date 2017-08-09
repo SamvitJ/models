@@ -105,13 +105,31 @@ def _apply_dct(image):
     image: 3-D Tensor of [height, width, 3] of type.float32.
 
   Returns:
-    image: 3-D Tensor of [height, width, 3] of type.float32.
+    output: 3-D Tensor of [height, width, 3] of type.float32.
   """
   channels = tf.unstack(image, axis=2)
   for channel in channels:
     arr = channel.eval(session=tf.Session())
-    cv2.dct(arr, numpy.empty(arr.shape))
+    out = numpy.empty(arr.shape)
+    cv2.dct(arr, out) # does NOT mutate arr
   tf.stack(channels, axis=2)
+  # TODO: return new tensor := DCT(input)
+
+
+def _apply_dft(input):
+  """Applies DFT to input tensor
+
+  Args:
+    input: 2-D Tensor of [height, width] of type.complex64.
+
+  Returns:
+    output: 2-D Tensor of [height, width] of type.complex64.
+  """
+  # TODO: verify that this is over the "inner-most 2 dimensions"
+  # https://www.tensorflow.org/api_docs/python/tf/fft2d
+  # [old] https://www.tensorflow.org/versions/r0.12/api_docs/python/math_ops/fourier_transform_functions
+  tf.spectral.fft2d(image, name=None)
+
 
 def _generate_image_and_label_batch(image, label, min_queue_examples,
                                     batch_size, shuffle, transformed=False):
@@ -146,10 +164,13 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
         num_threads=num_preprocess_threads,
         capacity=min_queue_examples + 3 * batch_size)
 
-  if transformed:
+  if transformed: # evaluation only
     imageList = tf.unstack(images, axis=0)
     for image in imageList:
-      _apply_dct(image)
+      channelList = tf.unstack(image, axis=2)
+      for channel in channelList:
+        _apply_dft(channel)
+      tf.stack(channelList, axis=2)
     tf.stack(imageList, axis=0)
 
   # Display the training images in the visualizer.
