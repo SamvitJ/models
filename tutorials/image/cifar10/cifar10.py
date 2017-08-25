@@ -230,7 +230,7 @@ def _conv2d_fft(images, kernel, strides, padding):
     framesFFT.append(frame)
 
   # perform FFT on kernels
-  kernels = tf.unstack(kernel, axis=3) # unstack outputs -> [h, w, inp_chan]
+  kernels = tf.unstack(kernel, axis=3) # unstack out chans -> [h, w, inp_chan]
   kernelsFFT = []
   for kern in kernels:
     # apply FFT to kernel for each channel
@@ -241,19 +241,28 @@ def _conv2d_fft(images, kernel, strides, padding):
     # add kern to list
     kernelsFFT.append(kern)
 
-  # perform Hadamard product + reduce (sum)
+  # perform pointwise products + reduce (sum)
   sums = []
   for kernelFFT in kernelsFFT: # 3-D tensors [h, w, inp_chan] * out_chan
     for frameFFT in framesFFT: # 3-D tensors [h, w, inp_chan] * batch_size
-      products = tf.multiply(frameFFT, kernelFFT)
-      productsList = tf.unstack(products, axis=2) # unstack channels
+      products = tf.multiply(kernelFFT, frameFFT)
+      productsList = tf.unstack(products, axis=2) # unstack inp chans
       sumI = tf.add_n(productsList)
       sums.append(sumI)
   # len(sums) := batch_size * out_chan
-
-  # reshape for IFFT
+  # sums = [[batch 1], [batch 2], ... [batch out_chan]]
 
   # perform IFFT
+  sumsIFFT = []
+  for sumI in sums:
+    sumIFFT = tf.spectral.ifft2d(sumI, name=None)
+    sumsIFFT.append(sumIFFT)
+  tf.stack(sumsIFFT, axis=3)
+
+  # reshape + transpose
+  interm = tf.reshape(sumsIFFT, [inp_h, inp_w, batch_size, out_chan])
+  output = tf.transpose(interm, perm=[2, 0, 1, 3])
+  return output
 
 
 def inference(images):
