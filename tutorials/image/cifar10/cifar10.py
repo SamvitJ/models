@@ -207,37 +207,49 @@ def _conv2d_fft(images, kernel, strides, padding):
   kernel_shape = tf.unstack(tf.shape(kernel), axis=0)
   ker_h = kernel_shape[0]
   ker_w = kernel_shape[1]
+  # inp_chan = kernel_shape[2]
   out_chan = kernel_shape[3]
 
   # pad filters to input shape
-  # kernel_padded = tf.zeros([inp_h, inp_w, inp_chan, out_chan], dtype=tf.float32)
   tf.pad(kernel, [[0, inp_h - ker_h], [0, inp_w - ker_w], [0, 0], [0, 0]], "CONSTANT")
 
   # reshape for FFT
-  inp_flat = tf.reshape(images, [inp_h, inp_w, inp_chan * batch_size])
-  ker_flat = tf.reshape(kernel, [inp_h, inp_w, inp_chan * out_chan])
+  # inp_flat = tf.reshape(images, [inp_h, inp_w, inp_chan * batch_size]) # check this
+  # ker_flat = tf.reshape(kernel, [inp_h, inp_w, inp_chan * out_chan]) # check this
 
-  # perform FFT
-  frames = tf.unstack(inp_flat, axis=2)
-  framesFFTList = []
+  # perform FFT on input
+  frames = tf.unstack(images, axis=0) # unstack batch -> [h, w, inp_chan]
+  framesFFT = []
   for frame in frames:
-    frame = tf.spectral.fft2d(frame, name=None)
-    framesFFTList.append(frame)
-  framesFFT = tf.stack(framesFFTList, axis=2)
+    # apply FFT to each channel of frame
+    channels = tf.unstack(frame, axis=2)
+    for channel in channels:
+      channel = tf.spectral.fft2d(channel, name=None) # modifies iterator
+    frame = tf.stack(channels, axis=2)
+    # add frame to list
+    framesFFT.append(frame)
 
-  kernels = tf.unstack(ker_flat, axis=2)
-  kernelsFFTList = []
+  # perform FFT on kernels
+  kernels = tf.unstack(kernel, axis=3) # unstack outputs -> [h, w, inp_chan]
+  kernelsFFT = []
   for kern in kernels:
-    kern = tf.spectral.fft2d(kern, name=None)
-    kernelsFFTList.append(kern)
-  kernelsFFT = tf.stack(kernelsFFTList, axis=2)
+    # apply FFT to kernel for each channel
+    channels = tf.unstack(kern, axis=2)
+    for channel in channels:
+      channel = tf.spectral.fft2d(channel, name=None) # modifies iterator
+    kern = tf.stack(channels, axis=2)
+    # add kern to list
+    kernelsFFT.append(kern)
 
-  # perform Hadamard (pointwise) product
-  for frameFFT in framesFFT:
-    for kernelFFT in kernelsFFT:
-      # build tensor
-
-  # compute sums (reduce)
+  # perform Hadamard product + reduce (sum)
+  sums = []
+  for kernelFFT in kernelsFFT: # 3-D tensors [h, w, inp_chan] * out_chan
+    for frameFFT in framesFFT: # 3-D tensors [h, w, inp_chan] * batch_size
+      products = tf.multiply(frameFFT, kernelFFT)
+      productsList = tf.unstack(products, axis=2) # unstack channels
+      sumI = tf.add_n(productsList)
+      sums.append(sumI)
+  # len(sums) := batch_size * out_chan
 
   # reshape for IFFT
 
