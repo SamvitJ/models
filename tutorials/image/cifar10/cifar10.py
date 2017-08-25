@@ -211,7 +211,11 @@ def _conv2d_fft(images, kernel, strides, padding):
   out_chan = kernel_shape[3]
 
   # pad filters to input shape
-  tf.pad(kernel, [[0, inp_h - ker_h], [0, inp_w - ker_w], [0, 0], [0, 0]], "CONSTANT")
+  h_diff = inp_h - ker_h
+  w_diff = inp_w - ker_w
+  kernelPad = tf.pad(kernel, [[0, h_diff], [0, w_diff], [0, 0], [0, 0]], "CONSTANT")
+
+  # kernelEmpty = tf.zeros([inp_h, inp_w, inp_chan, out_chan], tf.float32)
 
   # reshape for FFT
   # inp_flat = tf.reshape(images, [inp_h, inp_w, inp_chan * batch_size]) # check this
@@ -224,20 +228,20 @@ def _conv2d_fft(images, kernel, strides, padding):
     # apply FFT to each channel of frame
     channels = tf.unstack(frame, axis=2)
     for channel in channels:
-      channel = tf.spectral.fft2d(channel, name=None) # modifies iterator
-    frame = tf.stack(channels, axis=2)
+      channel = tf.spectral.rfft2d(channel, name=None) # WARN: modifies iterator WARN: changes dim
+    frame = tf.stack(channels, axis=2) # WARN: modifies iterator
     # add frame to list
     framesFFT.append(frame)
 
   # perform FFT on kernels
-  kernels = tf.unstack(kernel, axis=3) # unstack out chans -> [h, w, inp_chan]
+  kernels = tf.unstack(kernelPad, axis=3) # unstack out chans -> [h, w, inp_chan]
   kernelsFFT = []
   for kern in kernels:
     # apply FFT to kernel for each channel
     channels = tf.unstack(kern, axis=2)
     for channel in channels:
-      channel = tf.spectral.fft2d(channel, name=None) # modifies iterator
-    kern = tf.stack(channels, axis=2)
+      channel = tf.spectral.rfft2d(channel, name=None) # WARN: modifies iterator WARN: changes dim
+    kern = tf.stack(channels, axis=2) # WARN: modifies iterator
     # add kern to list
     kernelsFFT.append(kern)
 
@@ -255,7 +259,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   # perform IFFT
   sumsIFFT = []
   for sumI in sums:
-    sumIFFT = tf.spectral.ifft2d(sumI, name=None)
+    sumIFFT = tf.spectral.irfft2d(sumI, name=None)
     sumsIFFT.append(sumIFFT)
   tf.stack(sumsIFFT, axis=3)
 
