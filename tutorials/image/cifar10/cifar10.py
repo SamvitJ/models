@@ -197,25 +197,24 @@ def _conv2d_fft(images, kernel, strides, padding):
   """
 
   # extract parameters
-  input_shape = tf.unstack(tf.shape(images), axis=0)
+  input_shape = images.get_shape().as_list()
+  print(input_shape)
   # assumes data format = "NHWC"
   batch_size = input_shape[0]
   inp_h = input_shape[1]
   inp_w = input_shape[2]
   inp_chan = input_shape[3]
 
-  kernel_shape = tf.unstack(tf.shape(kernel), axis=0)
+  kernel_shape = kernel.get_shape().as_list()
+  print(kernel_shape)
   ker_h = kernel_shape[0]
   ker_w = kernel_shape[1]
-  # inp_chan = kernel_shape[2]
   out_chan = kernel_shape[3]
 
   # pad filters to input shape
   h_diff = inp_h - ker_h
   w_diff = inp_w - ker_w
   kernelPad = tf.pad(kernel, [[0, h_diff], [0, w_diff], [0, 0], [0, 0]], "CONSTANT")
-
-  # kernelEmpty = tf.zeros([inp_h, inp_w, inp_chan, out_chan], tf.float32)
 
   # reshape for FFT
   # inp_flat = tf.reshape(images, [inp_h, inp_w, inp_chan * batch_size]) # check this
@@ -227,11 +226,12 @@ def _conv2d_fft(images, kernel, strides, padding):
   for frame in frames:
     # apply FFT to each channel of frame
     channels = tf.unstack(frame, axis=2)
+    channelsFFT = []
     for channel in channels:
-      channel = tf.spectral.rfft2d(channel, name=None) # WARN: modifies iterator WARN: changes dim
-    frame = tf.stack(channels, axis=2) # WARN: modifies iterator
+      channelFFT = tf.spectral.rfft2d(channel, name=None) # WARN: changes dim
+      channelsFFT.append(channelFFT)
     # add frame to list
-    framesFFT.append(frame)
+    framesFFT.append(tf.stack(channelsFFT, axis=2))
 
   # perform FFT on kernels
   kernels = tf.unstack(kernelPad, axis=3) # unstack out chans -> [h, w, inp_chan]
@@ -239,29 +239,36 @@ def _conv2d_fft(images, kernel, strides, padding):
   for kern in kernels:
     # apply FFT to kernel for each channel
     channels = tf.unstack(kern, axis=2)
+    channelsFFT = []
     for channel in channels:
-      channel = tf.spectral.rfft2d(channel, name=None) # WARN: modifies iterator WARN: changes dim
-    kern = tf.stack(channels, axis=2) # WARN: modifies iterator
+      channelFFT = tf.spectral.rfft2d(channel, name=None) # WARN: changes dim
+      channelsFFT.append(channelFFT)
     # add kern to list
-    kernelsFFT.append(kern)
+    kernelsFFT.append(tf.stack(channelsFFT, axis=2))
 
   # perform pointwise products + reduce (sum)
   sums = []
-  for kernelFFT in kernelsFFT: # 3-D tensors [h, w, inp_chan] * out_chan
-    for frameFFT in framesFFT: # 3-D tensors [h, w, inp_chan] * batch_size
+  for kernelFFT in kernelsFFT: # 3-D tensors [h, w//2 + 1, inp_chan] * out_chan
+    for frameFFT in framesFFT: # 3-D tensors [h, w//2 + 1, inp_chan] * batch_size
       products = tf.multiply(kernelFFT, frameFFT)
       productsList = tf.unstack(products, axis=2) # unstack inp chans
       sumI = tf.add_n(productsList)
+      # print(sumI.get_shape())
       sums.append(sumI)
-  # len(sums) := batch_size * out_chan
-  # sums = [[batch 1], [batch 2], ... [batch out_chan]]
+
+  # check invariants
+  assert len(sums) == (batch_size * out_chan)
+  sumShape = sums[0].get_shape().as_list()
+  assert sumShape[0] == inp_h
+  assert sumShape[1] == (inp_w / 2) + 1
+  ## sums = [(batch 1), (batch 2), ... (batch out_chan)]
 
   # perform IFFT
   sumsIFFT = []
   for sumI in sums:
     sumIFFT = tf.spectral.irfft2d(sumI, name=None)
     sumsIFFT.append(sumIFFT)
-  tf.stack(sumsIFFT, axis=3)
+  tf.stack(sumsIFFT, axis=2)
 
   # reshape + transpose
   interm = tf.reshape(sumsIFFT, [inp_h, inp_w, batch_size, out_chan])
