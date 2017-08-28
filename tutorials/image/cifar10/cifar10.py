@@ -39,6 +39,7 @@ import os
 import re
 import sys
 import tarfile
+import time
 
 from six.moves import urllib
 import tensorflow as tf
@@ -196,6 +197,8 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   """
 
+  time1 = time.time()
+
   # extract parameters
   input_shape = images.get_shape().as_list()
   print(input_shape)
@@ -216,6 +219,8 @@ def _conv2d_fft(images, kernel, strides, padding):
   w_diff = inp_w - ker_w
   kernelPad = tf.pad(kernel, [[0, h_diff], [0, w_diff], [0, 0], [0, 0]], "CONSTANT")
 
+  time2 = time.time()
+
   # reshape for FFT
   # inp_flat = tf.reshape(images, [inp_h, inp_w, inp_chan * batch_size]) # check this
   # ker_flat = tf.reshape(kernel, [inp_h, inp_w, inp_chan * out_chan]) # check this
@@ -233,6 +238,8 @@ def _conv2d_fft(images, kernel, strides, padding):
     # add frame to list
     framesFFT.append(tf.stack(channelsFFT, axis=2))
 
+  time3 = time.time()
+
   # perform FFT on kernels
   kernels = tf.unstack(kernelPad, axis=3) # unstack out chans -> [h, w, inp_chan]
   kernelsFFT = []
@@ -246,6 +253,8 @@ def _conv2d_fft(images, kernel, strides, padding):
     # add kern to list
     kernelsFFT.append(tf.stack(channelsFFT, axis=2))
 
+  time4 = time.time()
+
   # perform pointwise products + reduce (sum)
   sums = []
   for kernelFFT in kernelsFFT: # 3-D tensors [h, w//2 + 1, inp_chan] * out_chan
@@ -256,11 +265,13 @@ def _conv2d_fft(images, kernel, strides, padding):
       # print(sumI.get_shape())
       sums.append(sumI)
 
+  time5 = time.time()
+
   # check invariants
-  assert len(sums) == (batch_size * out_chan)
-  sumShape = sums[0].get_shape().as_list()
-  assert sumShape[0] == inp_h
-  assert sumShape[1] == (inp_w / 2) + 1
+  # assert len(sums) == (batch_size * out_chan)
+  # sumShape = sums[0].get_shape().as_list()
+  # assert sumShape[0] == inp_h
+  # assert sumShape[1] == (inp_w / 2) + 1
   ## sums = [(batch 1), (batch 2), ... (batch out_chan)]
 
   # perform IFFT
@@ -270,9 +281,21 @@ def _conv2d_fft(images, kernel, strides, padding):
     sumsIFFT.append(sumIFFT)
   tf.stack(sumsIFFT, axis=2)
 
+  time6 = time.time()
+
   # reshape + transpose
   interm = tf.reshape(sumsIFFT, [inp_h, inp_w, batch_size, out_chan])
   output = tf.transpose(interm, perm=[2, 0, 1, 3])
+
+  time7 = time.time()
+
+  print(time2 - time1, "pad kernel")
+  print(time3 - time2, "FFT input")
+  print(time4 - time3, "FFT kernels")
+  print(time5 - time4, "prod + sum")
+  print(time6 - time5, "IFFT")
+  print(time7 - time6, "transpose")
+
   return output
 
 
@@ -296,12 +319,32 @@ def inference(images):
                                          shape=[5, 5, 3, 64],
                                          stddev=5e-2,
                                          wd=0.0)
-    # conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
-    conv = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
+    start = time.time()
+    conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
+    end = time.time()
+
+    startNew = time.time()
+    convNew = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
+    endNew = time.time()
+
+    print("End to end", end - start)
+    print("End to end", endNew - startNew)
+
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    pre_activation = tf.nn.bias_add(conv, biases)
+    pre_activation = tf.nn.bias_add(convNew, biases)
     conv1 = tf.nn.relu(pre_activation, name=scope.name)
     _activation_summary(conv1)
+
+    if conv != convNew:
+      print("different")
+
+      # sess = tf.Session()
+      # with sess.as_default():
+      #   conv.eval()
+      #   convNew.eval()
+
+      # conv = tf.Print(conv, [conv])
+      # convNew = tf.Print(convNew, [convNew])
 
   # pool1
   pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
