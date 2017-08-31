@@ -198,6 +198,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   """
 
   time1 = time.time()
+  tf.Print(images, [images], message="_conv2d_fft : t1 : images")
 
   # extract parameters
   input_shape = images.get_shape().as_list()
@@ -239,6 +240,8 @@ def _conv2d_fft(images, kernel, strides, padding):
     framesFFT.append(tf.stack(channelsFFT, axis=2))
 
   time3 = time.time()
+  imagesTensorFFT = tf.stack(framesFFT, axis=0)
+  tf.Print(imagesTensorFFT, [imagesTensorFFT], message="_conv2d_fft : t3 : imagesFFT")
 
   # perform FFT on kernels
   kernels = tf.unstack(kernelPad, axis=3) # unstack out chans -> [h, w, inp_chan]
@@ -254,6 +257,8 @@ def _conv2d_fft(images, kernel, strides, padding):
     kernelsFFT.append(tf.stack(channelsFFT, axis=2))
 
   time4 = time.time()
+  kernelsTensorFFT = tf.stack(framesFFT, axis=0)
+  tf.Print(kernelsTensorFFT, [kernelsTensorFFT], message="_conv2d_fft : t4 : kernelsFFT")
 
   # perform pointwise products + reduce (sum)
   sums = []
@@ -266,6 +271,8 @@ def _conv2d_fft(images, kernel, strides, padding):
       sums.append(sumI)
 
   time5 = time.time()
+  prodSumsTensorFFT = tf.stack(sums, axis=0)
+  tf.Print(prodSumsTensorFFT, [prodSumsTensorFFT], message="_conv2d_fft : t5 : prodSums")
 
   # check invariants
   # assert len(sums) == (batch_size * out_chan)
@@ -279,15 +286,17 @@ def _conv2d_fft(images, kernel, strides, padding):
   for sumI in sums:
     sumIFFT = tf.spectral.irfft2d(sumI, name=None)
     sumsIFFT.append(sumIFFT)
-  tf.stack(sumsIFFT, axis=2)
+  sumsTensorIFFT = tf.stack(sumsIFFT, axis=2)
 
   time6 = time.time()
+  tf.Print(sumsTensorIFFT, [sumsTensorIFFT], message="_conv2d_fft : t6 : prodSumsIFFT")
 
   # reshape + transpose
-  interm = tf.reshape(sumsIFFT, [inp_h, inp_w, batch_size, out_chan])
+  interm = tf.reshape(sumsTensorIFFT, [inp_h, inp_w, batch_size, out_chan])
   output = tf.transpose(interm, perm=[2, 0, 1, 3])
 
   time7 = time.time()
+  tf.Print(output, [output], message="_conv2d_fft : t7 : output")
 
   print(time2 - time1, "pad kernel")
   print(time3 - time2, "FFT input")
@@ -330,21 +339,21 @@ def inference(images):
     print("End to end", end - start)
     print("End to end", endNew - startNew)
 
-    biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    pre_activation = tf.nn.bias_add(convNew, biases)
-    conv1 = tf.nn.relu(pre_activation, name=scope.name)
-    _activation_summary(conv1)
-
     if conv != convNew:
       print("different")
+
+      # convNew = tf.Print(convNew, [convNew], message="This is FFT conv")
+      # conv = tf.Print(conv, [conv], message="This is spatial conv")
 
       # sess = tf.Session()
       # with sess.as_default():
       #   conv.eval()
       #   convNew.eval()
 
-      # conv = tf.Print(conv, [conv])
-      # convNew = tf.Print(convNew, [convNew])
+    biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
+    pre_activation = tf.nn.bias_add(conv, biases)
+    conv1 = tf.nn.relu(pre_activation, name=scope.name)
+    _activation_summary(conv1)
 
   # pool1
   pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
