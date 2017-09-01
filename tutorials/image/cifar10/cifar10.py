@@ -200,6 +200,11 @@ def _conv2d_fft(images, kernel, strides, padding):
   time1 = time.time()
   tf.Print(images, [images], message="_conv2d_fft : t1 : images")
 
+  # graph = tf.get_default_graph()
+  # ops = graph.get_operations()
+  # for op in ops:
+  #   print(op.name)
+
   # extract parameters
   input_shape = images.get_shape().as_list()
   print(input_shape)
@@ -328,19 +333,21 @@ def inference(images):
                                          shape=[5, 5, 3, 64],
                                          stddev=5e-2,
                                          wd=0.0)
-    start = time.time()
-    conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
-    end = time.time()
+    # start = time.time()
+    # conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
+    # end = time.time()
+
+    tf.Print(kernel, [kernel], message="inference : t0 : kernel")
 
     startNew = time.time()
     convNew = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
     endNew = time.time()
 
-    print("End to end", end - start)
+    # print("End to end", end - start)
     print("End to end", endNew - startNew)
 
-    if conv != convNew:
-      print("different")
+    # if conv != convNew:
+    #   print("different")
 
       # convNew = tf.Print(convNew, [convNew], message="This is FFT conv")
       # conv = tf.Print(conv, [conv], message="This is spatial conv")
@@ -351,7 +358,7 @@ def inference(images):
       #   convNew.eval()
 
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    pre_activation = tf.nn.bias_add(conv, biases)
+    pre_activation = tf.nn.bias_add(convNew, biases)
     conv1 = tf.nn.relu(pre_activation, name=scope.name)
     _activation_summary(conv1)
 
