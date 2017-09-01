@@ -200,7 +200,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   print("_conv2d_fft called")
 
   time1 = time.time()
-  tf.Print(images, [images], message="_conv2d_fft : t1 : images")
+  images = tf.Print(images, [images], message="_conv2d_fft : t1 : images")
 
   # graph = tf.get_default_graph()
   # ops = graph.get_operations()
@@ -248,7 +248,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   time3 = time.time()
   imagesTensorFFT = tf.stack(framesFFT, axis=0)
-  tf.Print(imagesTensorFFT, [imagesTensorFFT], message="_conv2d_fft : t3 : imagesFFT")
+  imagesTensorFFT = tf.Print(imagesTensorFFT, [imagesTensorFFT], message="_conv2d_fft : t3 : imagesFFT")
 
   # perform FFT on kernels
   kernels = tf.unstack(kernelPad, axis=3) # unstack out chans -> [h, w, inp_chan]
@@ -265,7 +265,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   time4 = time.time()
   kernelsTensorFFT = tf.stack(framesFFT, axis=0)
-  tf.Print(kernelsTensorFFT, [kernelsTensorFFT], message="_conv2d_fft : t4 : kernelsFFT")
+  kernelsTensorFFT = tf.Print(kernelsTensorFFT, [kernelsTensorFFT], message="_conv2d_fft : t4 : kernelsFFT")
 
   # perform pointwise products + reduce (sum)
   sums = []
@@ -279,7 +279,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   time5 = time.time()
   prodSumsTensorFFT = tf.stack(sums, axis=0)
-  tf.Print(prodSumsTensorFFT, [prodSumsTensorFFT], message="_conv2d_fft : t5 : prodSums")
+  prodSumsTensorFFT = tf.Print(prodSumsTensorFFT, [prodSumsTensorFFT], message="_conv2d_fft : t5 : prodSums")
 
   # check invariants
   # assert len(sums) == (batch_size * out_chan)
@@ -296,14 +296,14 @@ def _conv2d_fft(images, kernel, strides, padding):
   sumsTensorIFFT = tf.stack(sumsIFFT, axis=2)
 
   time6 = time.time()
-  tf.Print(sumsTensorIFFT, [sumsTensorIFFT], message="_conv2d_fft : t6 : prodSumsIFFT")
+  sumsTensorIFFT = tf.Print(sumsTensorIFFT, [sumsTensorIFFT], message="_conv2d_fft : t6 : prodSumsIFFT")
 
   # reshape + transpose
   interm = tf.reshape(sumsTensorIFFT, [inp_h, inp_w, batch_size, out_chan])
   output = tf.transpose(interm, perm=[2, 0, 1, 3])
 
   time7 = time.time()
-  tf.Print(output, [output], message="_conv2d_fft : t7 : output")
+  output = tf.Print(output, [output], message="_conv2d_fft : t7 : output")
 
   print(time2 - time1, "pad kernel")
   print(time3 - time2, "FFT input")
@@ -339,7 +339,7 @@ def inference(images):
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     end = time.time()
 
-    tf.Print(kernel, [kernel], message="inference : t0 : kernel")
+    kernel = tf.Print(kernel, [kernel], message="inference : t0 : kernel")
 
     startNew = time.time()
     convNew = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
