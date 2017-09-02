@@ -340,8 +340,8 @@ def inference(images):
     end = time.time()
 
     with tf.Session():
-      kernel = tf.Print(kernel, [kernel, tf.shape(kernel)], message="inference : t0 : kernel")
-      print(kernel.eval())
+      images = tf.Print(images, [images, tf.shape(images)], message="inference : t0 : images")
+      print(images.eval())
 
     startNew = time.time()
     convNew = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
