@@ -61,6 +61,9 @@ class CIFAR10InputTest(tf.test.TestCase):
       with self.assertRaises(tf.errors.OutOfRangeError):
         sess.run([result.key, result.uint8image])
 
+  def testConvFFT(self, conv, convFFT):
+    self.assertAllEqual(conv.eval(), conv2.eval())
+
 
 if __name__ == "__main__":
   tf.test.main()

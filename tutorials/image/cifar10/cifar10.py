@@ -197,7 +197,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   """
 
-  print("_conv2d_fft called")
+  print("_conv2d_fft : called")
 
   time1 = time.time()
   images = tf.Print(images, [images], message="_conv2d_fft : t1 : images")
@@ -282,10 +282,11 @@ def _conv2d_fft(images, kernel, strides, padding):
   prodSumsTensorFFT = tf.Print(prodSumsTensorFFT, [prodSumsTensorFFT], message="_conv2d_fft : t5 : prodSums")
 
   # check invariants
-  # assert len(sums) == (batch_size * out_chan)
-  # sumShape = sums[0].get_shape().as_list()
-  # assert sumShape[0] == inp_h
-  # assert sumShape[1] == (inp_w / 2) + 1
+  print("_conv2d_fft : checking invariants : prodSums")
+  assert len(sums) == (batch_size * out_chan)
+  sumShape = sums[0].get_shape().as_list()
+  assert sumShape[0] == inp_h
+  assert sumShape[1] == (inp_w / 2) + 1
   ## sums = [(batch 1), (batch 2), ... (batch out_chan)]
 
   # perform IFFT
@@ -296,7 +297,13 @@ def _conv2d_fft(images, kernel, strides, padding):
   sumsTensorIFFT = tf.stack(sumsIFFT, axis=2)
 
   time6 = time.time()
-  sumsTensorIFFT = tf.Print(sumsTensorIFFT, [sumsTensorIFFT], message="_conv2d_fft : t6 : prodSumsIFFT")
+  sumsTensorIFFT = tf.Print(sumsTensorIFFT, [sumsTensorIFFT], message="_conv2d_fft : t6 : IFFT")
+
+  print("_conv2d_fft : checking invariants : IFFT")
+  sumShapeIFFT = sumsTensorIFFT.get_shape().as_list()
+  assert sumShapeIFFT[0] == inp_h
+  assert sumShapeIFFT[1] == inp_w
+  assert sumShapeIFFT[2] == (batch_size * out_chan)
 
   # reshape + transpose
   interm = tf.reshape(sumsTensorIFFT, [inp_h, inp_w, batch_size, out_chan])
@@ -305,6 +312,14 @@ def _conv2d_fft(images, kernel, strides, padding):
   time7 = time.time()
   output = tf.Print(output, [output], message="_conv2d_fft : t7 : output")
 
+  print("_conv2d_fft : checking invariants : output")
+  outputShape = output.get_shape().as_list()
+  assert outputShape[0] == batch_size
+  assert outputShape[1] == inp_h
+  assert outputShape[2] == inp_w
+  assert outputShape[3] == out_chan
+
+  print("internal timing stats ---- ")
   print(time2 - time1, "pad kernel")
   print(time3 - time2, "FFT input")
   print(time4 - time3, "FFT kernels")
@@ -339,9 +354,9 @@ def inference(images):
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     end = time.time()
 
-    with tf.Session():
-      images = tf.Print(images, [images, tf.shape(images)], message="inference : t0 : images")
-      print(images.eval())
+    # with tf.Session():
+    #   images = tf.Print(images, [images, tf.shape(images)], message="inference : t0 : images")
+    #   print(images.eval())
 
     startNew = time.time()
     convNew = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
@@ -350,16 +365,19 @@ def inference(images):
     print("End to end", end - start)
     print("End to end", endNew - startNew)
 
-    if conv != convNew:
-      print("different")
+    # inputTest = CIFAR10InputTest()
+    # inputTest.testConvFFT(conv, convNew)
 
-      # convNew = tf.Print(convNew, [convNew], message="This is FFT conv")
-      # conv = tf.Print(conv, [conv], message="This is spatial conv")
+    with tf.control_dependencies([tf.assert_equal(conv, convNew)]):
+      convNew = tf.identity(convNew)
 
-      # sess = tf.Session()
-      # with sess.as_default():
-      #   conv.eval()
-      #   convNew.eval()
+    # convNew = tf.Print(convNew, [convNew], message="This is FFT conv")
+    # conv = tf.Print(conv, [conv], message="This is spatial conv")
+
+    # sess = tf.Session()
+    # with sess.as_default():
+    #   conv.eval()
+    #   convNew.eval()
 
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     pre_activation = tf.nn.bias_add(conv, biases)
