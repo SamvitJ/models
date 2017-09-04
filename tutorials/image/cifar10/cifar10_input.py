@@ -164,14 +164,14 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
         num_threads=num_preprocess_threads,
         capacity=min_queue_examples + 3 * batch_size)
 
-  if transformed: # evaluation only
-    imageList = tf.unstack(images, axis=0)
-    for image in imageList:
-      channelList = tf.unstack(image, axis=2)
-      for channel in channelList:
-        _apply_dft(channel)
-      tf.stack(channelList, axis=2)
-    tf.stack(imageList, axis=0)
+  # if transformed: # evaluation only
+  #   imageList = tf.unstack(images, axis=0)
+  #   for image in imageList:
+  #     channelList = tf.unstack(image, axis=2)
+  #     for channel in channelList:
+  #       _apply_dft(channel)
+  #     tf.stack(channelList, axis=2)
+  #   tf.stack(imageList, axis=0)
 
   # Display the training images in the visualizer.
   tf.summary.image('images', images)

@@ -369,6 +369,7 @@ def inference(images):
     # inputTest.testConvFFT(conv, convNew)
 
     with tf.control_dependencies([tf.assert_equal(conv, convNew)]):
+      print("conv and convNew are equal!")
       convNew = tf.identity(convNew)
 
     # convNew = tf.Print(convNew, [convNew], message="This is FFT conv")
