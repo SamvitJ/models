@@ -201,7 +201,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   """
 
   # pdb.set_trace()
-  print("_conv2d_fft : called")
+  # print("_conv2d_fft : called")
 
   time1 = time.time()
   images = tf.Print(images, [images], message="_conv2d_fft : t1 : images")
@@ -213,7 +213,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   # extract parameters
   input_shape = images.get_shape().as_list()
-  print(input_shape)
+  # print(input_shape)
   # assumes data format = "NHWC"
   batch_size = input_shape[0]
   inp_h = input_shape[1]
@@ -221,7 +221,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   inp_chan = input_shape[3]
 
   kernel_shape = kernel.get_shape().as_list()
-  print(kernel_shape)
+  # print(kernel_shape)
   ker_h = kernel_shape[0]
   ker_w = kernel_shape[1]
   out_chan = kernel_shape[3]
@@ -286,7 +286,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   prodSumsTensorFFT = tf.Print(prodSumsTensorFFT, [prodSumsTensorFFT], message="_conv2d_fft : t5 : prodSums")
 
   # check invariants
-  print("_conv2d_fft : checking invariants : prodSums")
+  # print("_conv2d_fft : checking invariants : prodSums")
   assert len(sums) == (batch_size * out_chan)
   sumShape = sums[0].get_shape().as_list()
   assert sumShape[0] == inp_h
@@ -303,7 +303,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   time6 = time.time()
   sumsTensorIFFT = tf.Print(sumsTensorIFFT, [sumsTensorIFFT], message="_conv2d_fft : t6 : IFFT")
 
-  print("_conv2d_fft : checking invariants : IFFT")
+  # print("_conv2d_fft : checking invariants : IFFT")
   sumShapeIFFT = sumsTensorIFFT.get_shape().as_list()
   assert sumShapeIFFT[0] == inp_h
   assert sumShapeIFFT[1] == inp_w
@@ -316,20 +316,20 @@ def _conv2d_fft(images, kernel, strides, padding):
   time7 = time.time()
   output = tf.Print(output, [output], message="_conv2d_fft : t7 : output")
 
-  print("_conv2d_fft : checking invariants : output")
+  # print("_conv2d_fft : checking invariants : output")
   outputShape = output.get_shape().as_list()
   assert outputShape[0] == batch_size
   assert outputShape[1] == inp_h
   assert outputShape[2] == inp_w
   assert outputShape[3] == out_chan
 
-  print("internal timing stats ---- ")
-  print(time2 - time1, "pad kernel")
-  print(time3 - time2, "FFT input")
-  print(time4 - time3, "FFT kernels")
-  print(time5 - time4, "prod + sum")
-  print(time6 - time5, "IFFT")
-  print(time7 - time6, "transpose")
+  # print("internal timing stats ---- ")
+  # print(time2 - time1, "pad kernel")
+  # print(time3 - time2, "FFT input")
+  # print(time4 - time3, "FFT kernels")
+  # print(time5 - time4, "prod + sum")
+  # print(time6 - time5, "IFFT")
+  # print(time7 - time6, "transpose")
 
   return output
 
@@ -357,6 +357,7 @@ def inference(images):
 
     imageList = tf.unstack(images, axis=0)
 
+    print("\nEnd to end (original) ----- ")
     for image in imageList:
       batch = tf.expand_dims(image, 0)
 
@@ -364,8 +365,9 @@ def inference(images):
       _ = tf.nn.conv2d(batch, kernel, [1, 1, 1, 1], padding='SAME')
       end = time.time()
 
-      print("End to end (ori)", end - start)
+      print(end - start)
 
+    print("\nEnd to end (with fft) ----- ")
     for image in imageList:
       batch = tf.expand_dims(image, 0)
 
@@ -373,7 +375,7 @@ def inference(images):
       _ = _conv2d_fft(batch, kernel, [1, 1, 1, 1], padding='SAME')
       endNew = time.time()
 
-      print("End to end (fft)", endNew - startNew)
+      print(endNew - startNew)
 
     images = tf.stack(imageList, axis=0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
