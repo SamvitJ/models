@@ -200,7 +200,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   """
 
-  pdb.set_trace()
+  # pdb.set_trace()
   print("_conv2d_fft : called")
 
   time1 = time.time()
@@ -354,20 +354,33 @@ def inference(images):
                                          shape=[5, 5, 3, 64],
                                          stddev=5e-2,
                                          wd=0.0)
-    start = time.time()
+
+    imageList = tf.unstack(images, axis=0)
+
+    for image in imageList:
+      batch = tf.expand_dims(image, 0)
+
+      start = time.time()
+      _ = tf.nn.conv2d(batch, kernel, [1, 1, 1, 1], padding='SAME')
+      end = time.time()
+
+      print("End to end (ori)", end - start)
+
+    for image in imageList:
+      batch = tf.expand_dims(image, 0)
+
+      startNew = time.time()
+      _ = _conv2d_fft(batch, kernel, [1, 1, 1, 1], padding='SAME')
+      endNew = time.time()
+
+      print("End to end (fft)", endNew - startNew)
+
+    images = tf.stack(imageList, axis=0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
-    end = time.time()
 
-    startNew = time.time()
-    convNew = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
-    endNew = time.time()
-
-    print("End to end", end - start)
-    print("End to end", endNew - startNew)
-
-    with tf.control_dependencies([tf.assert_equal(conv, convNew)]):
-      print("conv and convNew are equal!")
-      convNew = tf.identity(convNew)
+    # with tf.control_dependencies([tf.assert_equal(conv, convNew)]):
+    #   print("conv and convNew are equal!")
+    #   convNew = tf.identity(convNew)
 
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     pre_activation = tf.nn.bias_add(conv, biases)
