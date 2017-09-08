@@ -354,10 +354,6 @@ def inference(images):
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     end = time.time()
 
-    # with tf.Session():
-    #   images = tf.Print(images, [images, tf.shape(images)], message="inference : t0 : images")
-    #   print(images.eval())
-
     startNew = time.time()
     convNew = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
     endNew = time.time()
@@ -365,20 +361,9 @@ def inference(images):
     print("End to end", end - start)
     print("End to end", endNew - startNew)
 
-    # inputTest = CIFAR10InputTest()
-    # inputTest.testConvFFT(conv, convNew)
-
     with tf.control_dependencies([tf.assert_equal(conv, convNew)]):
       print("conv and convNew are equal!")
       convNew = tf.identity(convNew)
-
-    # convNew = tf.Print(convNew, [convNew], message="This is FFT conv")
-    # conv = tf.Print(conv, [conv], message="This is spatial conv")
-
-    # sess = tf.Session()
-    # with sess.as_default():
-    #   conv.eval()
-    #   convNew.eval()
 
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     pre_activation = tf.nn.bias_add(conv, biases)
