@@ -44,6 +44,8 @@ import tensorflow as tf
 
 import cifar10
 
+import pdb
+
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string('train_dir', '/tmp/cifar10_train',
@@ -70,14 +72,19 @@ def train():
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
+    print(images.get_shape())
+    # pdb.set_trace()
     logits = cifar10.inference(images)
+    logits_FFT = cifar10.inference(images, fft=True)
 
     # Calculate loss.
     loss = cifar10.loss(logits, labels)
+    loss_FFT = cifar10.loss(logits_FFT, labels)
 
     # Build a Graph that trains the model with one batch of examples and
     # updates the model parameters.
     train_op = cifar10.train(loss, global_step)
+    train_op_FFT = cifar10.train(loss_FFT, global_step)
 
     class _LoggerHook(tf.train.SessionRunHook):
       """Logs loss and runtime."""
