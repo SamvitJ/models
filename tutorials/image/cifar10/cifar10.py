@@ -46,6 +46,9 @@ import tensorflow as tf
 
 import cifar10_input
 
+import pdb
+pdb.set_trace()
+
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
@@ -197,6 +200,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   """
 
+  pdb.set_trace()
   print("_conv2d_fft : called")
 
   time1 = time.time()
