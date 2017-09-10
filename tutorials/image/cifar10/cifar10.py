@@ -250,8 +250,7 @@ def _conv2d_fft(images, kernel, strides, padding):
     framesFFT.append(tf.stack(channelsFFT, axis=2))
 
   time3 = time.time()
-  imagesTensorFFT = tf.stack(framesFFT, axis=0)
-  imagesTensorFFT = tf.Print(imagesTensorFFT, [imagesTensorFFT], message="_conv2d_fft : t3 : imagesFFT")
+  images = tf.Print(images, framesFFT, message="_conv2d_fft : t3 : framesFFT")
 
   # perform FFT on kernels
   kernels = tf.unstack(kernelPad, axis=3) # unstack out chans -> [h, w, inp_chan]
@@ -267,8 +266,7 @@ def _conv2d_fft(images, kernel, strides, padding):
     kernelsFFT.append(tf.stack(channelsFFT, axis=2))
 
   time4 = time.time()
-  kernelsTensorFFT = tf.stack(framesFFT, axis=0)
-  kernelsTensorFFT = tf.Print(kernelsTensorFFT, [kernelsTensorFFT], message="_conv2d_fft : t4 : kernelsFFT")
+  images = tf.Print(images, kernelsFFT, message="_conv2d_fft : t4 : kernelsFFT")
 
   # perform pointwise products + reduce (sum)
   sums = []
@@ -281,8 +279,7 @@ def _conv2d_fft(images, kernel, strides, padding):
       sums.append(sumI)
 
   time5 = time.time()
-  prodSumsTensorFFT = tf.stack(sums, axis=0)
-  prodSumsTensorFFT = tf.Print(prodSumsTensorFFT, [prodSumsTensorFFT], message="_conv2d_fft : t5 : prodSums")
+  images = tf.Print(images, sums, message="_conv2d_fft : t5 : prodSums")
 
   # check invariants
   # print("_conv2d_fft : checking invariants : prodSums")
@@ -300,7 +297,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   sumsTensorIFFT = tf.stack(sumsIFFT, axis=2)
 
   time6 = time.time()
-  sumsTensorIFFT = tf.Print(sumsTensorIFFT, [sumsTensorIFFT], message="_conv2d_fft : t6 : IFFT")
+  images = tf.Print(images, [sumsTensorIFFT], message="_conv2d_fft : t6 : IFFT")
 
   # print("_conv2d_fft : checking invariants : IFFT")
   sumShapeIFFT = sumsTensorIFFT.get_shape().as_list()
@@ -313,7 +310,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   output = tf.transpose(interm, perm=[2, 0, 1, 3])
 
   time7 = time.time()
-  output = tf.Print(output, [output], message="_conv2d_fft : t7 : output")
+  images = tf.Print(images, [output], message="_conv2d_fft : t7 : output")
 
   # print("_conv2d_fft : checking invariants : output")
   outputShape = output.get_shape().as_list()
