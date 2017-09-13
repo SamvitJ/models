@@ -47,7 +47,6 @@ import tensorflow as tf
 import cifar10_input
 
 import pdb
-pdb.set_trace()
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -376,6 +375,10 @@ def inference(images, fft=False):
 
     #   print(endNew - startNew)
     # images = tf.stack(imageList, axis=0)
+
+    # turn all images white
+    images = tf.multiply(images, tf.constant(0., shape=images.get_shape()))
+    images = tf.add(images, tf.constant(1., shape=images.get_shape()))
 
     if fft:
       conv = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
