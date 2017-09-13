@@ -203,7 +203,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   # print("_conv2d_fft : called")
 
   time1 = time.time()
-  images = tf.Print(images, [images], message="_conv2d_fft : t1 : images")
+  images = tf.Print(images, [images], message="_conv2d_fft : t1 : images", summarize=100)
 
   # graph = tf.get_default_graph()
   # ops = graph.get_operations()
@@ -251,7 +251,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   time3 = time.time()
   images = tf.Print(images, [tf.real(tf.stack(framesFFT, axis=0))],
-    message="_conv2d_fft : t3 : framesFFT", summarize=10)
+    message="_conv2d_fft : t3 : framesFFT", summarize=100)
 
   # perform FFT on kernels
   kernels = tf.unstack(kernelPad, axis=3) # unstack out chans -> [h, w, inp_chan]
@@ -268,7 +268,7 @@ def _conv2d_fft(images, kernel, strides, padding):
 
   time4 = time.time()
   images = tf.Print(images, [tf.real(tf.stack(kernelsFFT, axis=0))],
-    message="_conv2d_fft : t4 : kernelsFFT", summarize=10)
+    message="_conv2d_fft : t4 : kernelsFFT", summarize=100)
 
   return tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
 
