@@ -250,7 +250,8 @@ def _conv2d_fft(images, kernel, strides, padding):
     framesFFT.append(tf.stack(channelsFFT, axis=2))
 
   time3 = time.time()
-  images = tf.Print(images, framesFFT, message="_conv2d_fft : t3 : framesFFT")
+  images = tf.Print(images, [tf.real(tf.stack(framesFFT, axis=0))],
+    message="_conv2d_fft : t3 : framesFFT", summarize=10)
 
   # perform FFT on kernels
   kernels = tf.unstack(kernelPad, axis=3) # unstack out chans -> [h, w, inp_chan]
@@ -266,7 +267,10 @@ def _conv2d_fft(images, kernel, strides, padding):
     kernelsFFT.append(tf.stack(channelsFFT, axis=2))
 
   time4 = time.time()
-  images = tf.Print(images, kernelsFFT, message="_conv2d_fft : t4 : kernelsFFT")
+  images = tf.Print(images, [tf.real(tf.stack(kernelsFFT, axis=0))],
+    message="_conv2d_fft : t4 : kernelsFFT", summarize=10)
+
+  return tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
 
   # perform pointwise products + reduce (sum)
   sums = []
@@ -351,27 +355,27 @@ def inference(images, fft=False):
                                          stddev=5e-2,
                                          wd=0.0)
 
-    imageList = tf.unstack(images, axis=0)
-    print("\nEnd to end (original) ----- ")
-    for image in imageList:
-      batch = tf.expand_dims(image, 0)
+    # imageList = tf.unstack(images, axis=0)
+    # print("\nEnd to end (original) ----- ")
+    # for image in imageList:
+    #   batch = tf.expand_dims(image, 0)
 
-      start = time.time()
-      _ = tf.nn.conv2d(batch, kernel, [1, 1, 1, 1], padding='SAME')
-      end = time.time()
+    #   start = time.time()
+    #   _ = tf.nn.conv2d(batch, kernel, [1, 1, 1, 1], padding='SAME')
+    #   end = time.time()
 
-      print(end - start)
+    #   print(end - start)
 
-    print("\nEnd to end (with fft) ----- ")
-    for image in imageList:
-      batch = tf.expand_dims(image, 0)
+    # print("\nEnd to end (with fft) ----- ")
+    # for image in imageList:
+    #   batch = tf.expand_dims(image, 0)
 
-      startNew = time.time()
-      _ = _conv2d_fft(batch, kernel, [1, 1, 1, 1], padding='SAME')
-      endNew = time.time()
+    #   startNew = time.time()
+    #   _ = _conv2d_fft(batch, kernel, [1, 1, 1, 1], padding='SAME')
+    #   endNew = time.time()
 
-      print(endNew - startNew)
-    images = tf.stack(imageList, axis=0)
+    #   print(endNew - startNew)
+    # images = tf.stack(imageList, axis=0)
 
     if fft:
       conv = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
