@@ -269,8 +269,6 @@ def _conv2d_fft(images, kernel, strides, padding):
   images = tf.Print(images, [tf.real(tf.stack(kernelsFFT, axis=0))],
     message="_conv2d_fft : t4 : kernelsFFT", summarize=100)
 
-  return tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
-
   # perform pointwise products + reduce (sum)
   sums = []
   for kernelFFT in kernelsFFT: # 3-D tensors [h, w//2 + 1, inp_chan] * out_chan
@@ -313,7 +311,11 @@ def _conv2d_fft(images, kernel, strides, padding):
   output = tf.transpose(interm, perm=[2, 0, 1, 3])
 
   time7 = time.time()
-  images = tf.Print(images, [output], message="_conv2d_fft : t7 : output")
+  images = tf.Print(images, [output], message="_conv2d_fft : t7a : output")
+
+  # check for equality with reference
+  ref = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
+  images = tf.Print(images, [ref], message="_conv2d_fft : t7b : reference")
 
   # print("_conv2d_fft : checking invariants : output")
   outputShape = output.get_shape().as_list()
@@ -377,8 +379,8 @@ def inference(images, fft=False):
     # images = tf.stack(imageList, axis=0)
 
     # turn all images white
-    images = tf.multiply(images, tf.constant(0., shape=images.get_shape()))
-    images = tf.add(images, tf.constant(1., shape=images.get_shape()))
+    # images = tf.multiply(images, tf.constant(0., shape=images.get_shape()))
+    # images = tf.add(images, tf.constant(1., shape=images.get_shape()))
 
     if fft:
       conv = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
