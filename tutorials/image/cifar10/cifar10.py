@@ -280,7 +280,8 @@ def _conv2d_fft(images, kernel, strides, padding):
       sums.append(sumI)
 
   time5 = time.time()
-  images = tf.Print(images, sums, message="_conv2d_fft : t5 : prodSums")
+  images = tf.Print(images, [tf.real(tf.stack(sums, axis=0))],
+    message="_conv2d_fft : t5 : prodSums", summarize=100)
 
   # check invariants
   # print("_conv2d_fft : checking invariants : prodSums")
@@ -298,7 +299,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   sumsTensorIFFT = tf.stack(sumsIFFT, axis=2)
 
   time6 = time.time()
-  images = tf.Print(images, [sumsTensorIFFT], message="_conv2d_fft : t6 : IFFT")
+  images = tf.Print(images, [sumsTensorIFFT], message="_conv2d_fft : t6 : IFFT", summarize=100)
 
   # print("_conv2d_fft : checking invariants : IFFT")
   sumShapeIFFT = sumsTensorIFFT.get_shape().as_list()
@@ -311,11 +312,11 @@ def _conv2d_fft(images, kernel, strides, padding):
   output = tf.transpose(interm, perm=[2, 0, 1, 3])
 
   time7 = time.time()
-  images = tf.Print(images, [output], message="_conv2d_fft : t7a : output")
+  images = tf.Print(images, [output], message="_conv2d_fft : t7a : output", summarize=100)
 
   # check for equality with reference
   ref = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
-  images = tf.Print(images, [ref], message="_conv2d_fft : t7b : reference")
+  images = tf.Print(images, [ref], message="_conv2d_fft : t7b : reference", summarize=100)
 
   # print("_conv2d_fft : checking invariants : output")
   outputShape = output.get_shape().as_list()
@@ -332,7 +333,7 @@ def _conv2d_fft(images, kernel, strides, padding):
   # print(time6 - time5, "IFFT")
   # print(time7 - time6, "transpose")
 
-  return output
+  return tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
 
 
 def inference(images, fft=False):
@@ -383,7 +384,14 @@ def inference(images, fft=False):
     # images = tf.add(images, tf.constant(1., shape=images.get_shape()))
 
     if fft:
-      conv = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
+      # conv = _conv2d_fft(images, kernel, [1, 1, 1, 1], padding='SAME')
+      imageList = tf.unstack(images, axis=0)
+      batch = tf.expand_dims(imageList[0], 0)
+      conv = _conv2d_fft(batch, kernel, [1, 1, 1, 1], padding='SAME')
+
+      images = tf.stack(imageList, axis=0)
+      # conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
+
     else:
       conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
 
