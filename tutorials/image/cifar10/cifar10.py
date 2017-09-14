@@ -312,11 +312,11 @@ def _conv2d_fft(images, kernel, strides, padding):
   output = tf.transpose(interm, perm=[2, 0, 1, 3])
 
   time7 = time.time()
-  images = tf.Print(images, [output], message="_conv2d_fft : t7a : output", summarize=100)
+  images = tf.Print(images, [output], message="_conv2d_fft : t7a : output", summarize=1665)
 
   # check for equality with reference
   ref = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
-  images = tf.Print(images, [ref], message="_conv2d_fft : t7b : reference", summarize=100)
+  images = tf.Print(images, [ref], message="_conv2d_fft : t7b : reference", summarize=1665)
 
   # print("_conv2d_fft : checking invariants : output")
   outputShape = output.get_shape().as_list()
